@@ -164,6 +164,16 @@ func (b *Bot) Start() {
 	b.telegram.Start()
 }
 
+// Room returns the room with the given telegram chat id.
+func (b *Bot) Room(chatID int64) *room.Room {
+	b.RLock()
+	defer b.RUnlock()
+	if chat, ok := b.chats[chatID]; ok {
+		return chat.Room
+	}
+	return nil
+}
+
 func (b *Bot) seeChat(chatID int64) *chat {
 	b.Lock()
 	defer b.Unlock()
