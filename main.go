@@ -15,8 +15,9 @@ func main() {
 		panic(err)
 	}
 
-	err := telegram.StartTelegramBot(cfg.TelegramBotToken)
+	bot, err := telegram.NewBot(cfg.TelegramBotToken)
 	if err != nil {
 		panic(err)
 	}
+	bot.Start()
 }

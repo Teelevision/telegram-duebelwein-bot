@@ -14,8 +14,9 @@ import (
 	tb "gopkg.in/tucnak/telebot.v2"
 )
 
-type bot struct {
-	*tb.Bot
+// Bot is a Dübelwein Telegram bot.
+type Bot struct {
+	telegram *tb.Bot
 	sync.RWMutex
 	chats map[int64]*chat
 }
@@ -34,36 +35,39 @@ type mediumContext struct {
 	cleanUp         func(why string)
 }
 
-// StartTelegramBot starts the Dübelwein Telegram bot.
-func StartTelegramBot(token string) error {
+// NewBot returns a new bot. It is not started, yet.
+func NewBot(token string) (*Bot, error) {
 	tbBot, err := tb.NewBot(tb.Settings{
 		Token:  token,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	b := bot{
-		Bot:   tbBot,
-		chats: make(map[int64]*chat),
-	}
+	return &Bot{
+		telegram: tbBot,
+		chats:    make(map[int64]*chat),
+	}, nil
+}
 
-	b.Handle(tb.OnAddedToGroup, func(msg *tb.Message) {
+// Start starts the bot.
+func (b *Bot) Start() {
+	b.telegram.Handle(tb.OnAddedToGroup, func(msg *tb.Message) {
 		if !msg.FromGroup() {
 			return
 		}
 		b.seeChat(msg.Chat.ID)
-		b.Send(msg.Chat, "🔥 Dübelweinbot is in da house! ☠️")
+		b.telegram.Send(msg.Chat, "🔥 Dübelweinbot is in da house! ☠️")
 	})
 
-	b.Handle(tb.OnUserJoined, func(msg *tb.Message) {
+	b.telegram.Handle(tb.OnUserJoined, func(msg *tb.Message) {
 		if !msg.FromGroup() {
 			return
 		}
 		b.seeUser(msg.Chat.ID, msg.Sender.ID)
 	})
 
-	b.Handle(tb.OnUserLeft, func(msg *tb.Message) {
+	b.telegram.Handle(tb.OnUserLeft, func(msg *tb.Message) {
 		if !msg.FromGroup() {
 			return
 		}
@@ -73,7 +77,7 @@ func StartTelegramBot(token string) error {
 	})
 
 	// TODO: just for testing
-	b.Handle("/play", func(msg *tb.Message) {
+	b.telegram.Handle("/play", func(msg *tb.Message) {
 		if !msg.FromGroup() {
 			return
 		}
@@ -86,13 +90,13 @@ func StartTelegramBot(token string) error {
 			mediumCtx, ok := chat.media[m]
 			chat.RUnlock()
 			if ok {
-				b.Send(msg.Chat, fmt.Sprintf("%s (%s)", m.ID(), m.Provider()))
+				b.telegram.Send(msg.Chat, fmt.Sprintf("%s (%s)", m.ID(), m.Provider()))
 				mediumCtx.cleanUp("played")
 			}
 		}
 	})
 
-	b.Handle(tb.OnText, func(msg *tb.Message) {
+	b.telegram.Handle(tb.OnText, func(msg *tb.Message) {
 		if !msg.FromGroup() {
 			return
 		}
@@ -103,7 +107,7 @@ func StartTelegramBot(token string) error {
 		m, err := medium.New(url)
 		if err != nil {
 			// reply that no medium could be found and abort
-			b.Send(msg.Chat, "Wat?!", tb.Silent, &tb.SendOptions{
+			b.telegram.Send(msg.Chat, "Wat?!", tb.Silent, &tb.SendOptions{
 				ReplyTo: msg,
 			})
 			log.Printf("could not load medium from %q: %s", url, err)
@@ -126,19 +130,19 @@ func StartTelegramBot(token string) error {
 				InlineKeyboard: [][]tb.InlineButton{{downvote, resetvote, upvote}},
 			},
 		}
-		voteMsg, _ := b.Send(msg.Chat, "Queued (score: 0)", sendOpt)
+		voteMsg, _ := b.telegram.Send(msg.Chat, "Queued (score: 0)", sendOpt)
 
 		// vote logic
 		vote := func(c *tb.Callback, gravity int) {
 			chat, user := b.seeUser(msg.Chat.ID, c.Sender.ID)
 			_ = chat.UserVotesMedium(user, m, gravity)
 			score, _ := chat.GetMediumScore(m)
-			b.Respond(c, &tb.CallbackResponse{Text: "Voted!"})
-			b.Edit(voteMsg, fmt.Sprintf("Queued (score: %d)", score), sendOpt)
+			b.telegram.Respond(c, &tb.CallbackResponse{Text: "Voted!"})
+			b.telegram.Edit(voteMsg, fmt.Sprintf("Queued (score: %d)", score), sendOpt)
 		}
-		b.Handle(&upvote, func(c *tb.Callback) { vote(c, +1) })
-		b.Handle(&resetvote, func(c *tb.Callback) { vote(c, 0) })
-		b.Handle(&downvote, func(c *tb.Callback) { vote(c, -1) })
+		b.telegram.Handle(&upvote, func(c *tb.Callback) { vote(c, +1) })
+		b.telegram.Handle(&resetvote, func(c *tb.Callback) { vote(c, 0) })
+		b.telegram.Handle(&downvote, func(c *tb.Callback) { vote(c, -1) })
 
 		// create clean up func
 		chat.media[m] = &mediumContext{
@@ -147,21 +151,20 @@ func StartTelegramBot(token string) error {
 				chat.Lock()
 				defer chat.Unlock()
 				sendOpt.ReplyMarkup = nil
-				b.Edit(voteMsg, why, sendOpt)
+				b.telegram.Edit(voteMsg, why, sendOpt)
 				// release resources so that the gc can do the rest
-				b.Handle(&upvote, nil)
-				b.Handle(&resetvote, nil)
-				b.Handle(&downvote, nil)
+				b.telegram.Handle(&upvote, nil)
+				b.telegram.Handle(&resetvote, nil)
+				b.telegram.Handle(&downvote, nil)
 				delete(chat.media, m)
 			},
 		}
 	})
 
-	b.Start()
-	return nil
+	b.telegram.Start()
 }
 
-func (b *bot) seeChat(chatID int64) *chat {
+func (b *Bot) seeChat(chatID int64) *chat {
 	b.Lock()
 	defer b.Unlock()
 	if chat, ok := b.chats[chatID]; ok {
@@ -175,7 +178,7 @@ func (b *bot) seeChat(chatID int64) *chat {
 	return b.chats[chatID]
 }
 
-func (b *bot) seeUser(chatID int64, userID int) (*chat, *user) {
+func (b *Bot) seeUser(chatID int64, userID int) (*chat, *user) {
 	chat := b.seeChat(chatID)
 	chat.Lock()
 	defer chat.Unlock()
