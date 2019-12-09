@@ -13,3 +13,6 @@
 
 # environment
 .env
+
+# compiled
+duebelbot
