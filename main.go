@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/Teelevision/telegram-duebelwein-bot/api"
 	"github.com/Teelevision/telegram-duebelwein-bot/telegram"
 	env "github.com/caarlos0/env/v6"
 )
@@ -15,9 +16,15 @@ func main() {
 		panic(err)
 	}
 
+	// start bot
 	bot, err := telegram.NewBot(cfg.TelegramBotToken)
 	if err != nil {
 		panic(err)
 	}
-	bot.Start()
+	go bot.Start()
+
+	// start api
+	go api.Run(bot)
+
+	select {} // keep running
 }
