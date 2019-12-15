@@ -125,7 +125,7 @@ func (b *Bot) Start() {
 		// add the medium to the room
 		chat.Lock() // lock until clean up func is created
 		defer chat.Unlock()
-		chat.UserQueuesMedium(user, m)
+		played, _ := chat.UserQueuesMedium(user, m) // TODO: handle error
 
 		// show vote buttons
 		mID := strconv.FormatInt(rand.Int63(), 36)
@@ -153,7 +153,7 @@ func (b *Bot) Start() {
 		b.telegram.Handle(&downvote, func(c *tb.Callback) { vote(c, -1) })
 
 		// create clean up func
-		chat.media[m] = &mediumContext{
+		mediumCtx := &mediumContext{
 			originalMessage: msg,
 			cleanUp: func(why string) {
 				chat.Lock()
@@ -167,6 +167,16 @@ func (b *Bot) Start() {
 				delete(chat.media, m)
 			},
 		}
+		chat.media[m] = mediumCtx
+
+		// clean up when played/removed
+		go func() {
+			reason := "removed"
+			if nil == <-played {
+				reason = "played"
+			}
+			mediumCtx.cleanUp(reason)
+		}()
 	})
 
 	b.telegram.Start()

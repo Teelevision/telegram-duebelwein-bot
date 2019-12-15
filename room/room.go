@@ -40,6 +40,8 @@ func (r *Room) UserLeaves(user interface{}) {
 	// remove all media and votes of that user
 	for m, info := range r.media {
 		if info.user == user {
+			// inform that the medium was removed
+			info.played <- ErrMediumUnknown
 			delete(r.media, m)
 			continue
 		}
@@ -51,32 +53,38 @@ func (r *Room) UserLeaves(user interface{}) {
 }
 
 // UserQueuesMedium adds a medium to the room.
-func (r *Room) UserQueuesMedium(user interface{}, m medium.Medium) error {
+func (r *Room) UserQueuesMedium(user interface{}, m medium.Medium) (<-chan error, error) {
 	r.l.Lock()
 	defer r.l.Unlock()
 	// get user info
 	if _, ok := r.users[user]; !ok {
-		return ErrUserUnknown
+		return nil, ErrUserUnknown
 	}
 	// check if duplicate
 	for existing := range r.media {
 		if medium.Identical(m, existing) {
-			return ErrMediumAlreadyExists
+			return nil, ErrMediumAlreadyExists
 		}
 	}
 	// add medium
-	r.media[m] = &mediumInfo{
+	info := &mediumInfo{
 		user:    user,
 		addedAt: time.Now(),
 		votes:   make(map[interface{}]int),
+		played:  make(chan error, 1),
 	}
-	return nil
+	r.media[m] = info
+	return info.played, nil
 }
 
 // MediumPlayed removes the medium from the room.
 func (r *Room) MediumPlayed(m medium.Medium) {
 	r.l.Lock()
 	defer r.l.Unlock()
+	// inform that the medium was played
+	if info := r.media[m]; info != nil {
+		info.played <- nil
+	}
 	// remove medium
 	delete(r.media, m)
 }
@@ -158,6 +166,9 @@ type mediumInfo struct {
 	addedAt time.Time
 	votes   map[interface{}]int
 	score   int
+
+	// sending nil if medium was played or ErrMediumUnknown if it was removed
+	played chan error
 }
 
 func (m *mediumInfo) vote(user interface{}, gravity int) {
