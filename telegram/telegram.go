@@ -67,19 +67,21 @@ func (b *Bot) Start() {
 	})
 
 	b.telegram.Handle(tb.OnUserJoined, func(msg *tb.Message) {
-		if !msg.FromGroup() {
+		if !msg.FromGroup() || msg.UserJoined == nil {
 			return
 		}
-		b.seeUser(msg.Chat.ID, msg.Sender.ID)
+		b.seeUser(msg.Chat.ID, msg.UserJoined.ID)
 	})
 
 	b.telegram.Handle(tb.OnUserLeft, func(msg *tb.Message) {
-		if !msg.FromGroup() {
+		// NOTE: It seems in groups we don't get a notification about someone
+		// being kicked.
+		if !msg.FromGroup() || msg.UserLeft == nil {
 			return
 		}
-		chat, user := b.seeUser(msg.Chat.ID, msg.Sender.ID)
+		chat, user := b.seeUser(msg.Chat.ID, msg.UserLeft.ID)
 		chat.UserLeaves(user)
-		delete(chat.users, msg.Sender.ID)
+		delete(chat.users, msg.UserLeft.ID)
 	})
 
 	// TODO: just for testing
