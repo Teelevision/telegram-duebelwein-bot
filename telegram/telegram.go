@@ -125,7 +125,18 @@ func (b *Bot) Start() {
 		// add the medium to the room
 		chat.Lock() // lock until clean up func is created
 		defer chat.Unlock()
-		played, _ := chat.UserQueuesMedium(user, m) // TODO: handle error
+		played, err := chat.UserQueuesMedium(user, m)
+		if err != nil {
+			resp := "error"
+			if err == room.ErrMediumAlreadyExists {
+				resp = "REEEEEEEpost"
+			}
+			b.telegram.Send(msg.Chat, resp, tb.Silent, &tb.SendOptions{
+				ReplyTo: msg,
+			})
+			log.Printf("could not queue medium: %s", err)
+			return
+		}
 
 		// show vote buttons
 		mID := strconv.FormatInt(rand.Int63(), 36)
