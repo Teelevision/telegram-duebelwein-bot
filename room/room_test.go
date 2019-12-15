@@ -68,6 +68,29 @@ func ExampleRoom_Queue() {
 	// #3 wodka by da tweekaz (Score: 0)
 }
 
+func TestRoom_Queue(t *testing.T) {
+	t.Run("most voted are queued first", func(t *testing.T) {
+		room := testRoom{New()}
+		room.UserJoins("A")
+		room.UserJoins("B")
+		room.UserQueuesMedium("A", nightWitchesBySabaton)
+		room.UserVotesMedium("B", nightWitchesBySabaton, +1)
+		room.UserQueuesMedium("B", wodkaByDaTweekaz)
+		room.UserVotesMedium("B", wodkaByDaTweekaz, +1)
+		room.UserVotesMedium("A", wodkaByDaTweekaz, +1)
+		q := room.Queue()
+		if len(q) != 2 {
+			t.Fatal("expected queue to contain 2 songs")
+		}
+		if want, got := wodkaByDaTweekaz, q[0]; got != want {
+			t.Fatalf("expected song %q to play first, but got %q", want, got)
+		}
+		if want, got := nightWitchesBySabaton, q[1]; got != want {
+			t.Fatalf("expected song %q to play second, but got %q", want, got)
+		}
+	})
+}
+
 func TestRoom_UserQueuesMedium(t *testing.T) {
 	t.Run("does not allow duplicates", func(t *testing.T) {
 		room := New()
