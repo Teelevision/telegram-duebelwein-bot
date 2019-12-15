@@ -29,7 +29,9 @@ type chat struct {
 	media map[medium.Medium]*mediumContext
 }
 
-type user struct{}
+type user struct {
+	ID int
+}
 
 type mediumContext struct {
 	originalMessage *tb.Message
@@ -199,7 +201,7 @@ func (b *Bot) seeUser(chatID int64, userID int) (*chat, *user) {
 	if user, ok := chat.users[userID]; ok {
 		return chat, user
 	}
-	user := new(user)
+	user := &user{ID: userID}
 	chat.users[userID] = user
 	chat.UserJoins(user)
 	return chat, user
