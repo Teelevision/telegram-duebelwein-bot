@@ -8,6 +8,7 @@ import (
 
 type config struct {
 	TelegramBotToken  string `env:"TELEGRAM_BOT_TOKEN"`
+	APIListen         string `env:"API_LISTEN" envDefault:":40292"`
 	PlayerURLTemplate string `env:"PLAYER_URL_TEMPLATE"`
 }
 
@@ -25,7 +26,7 @@ func main() {
 	go bot.Start()
 
 	// start api
-	go api.Run(bot)
+	go api.Run(bot, cfg.APIListen)
 
 	select {} // keep running
 }

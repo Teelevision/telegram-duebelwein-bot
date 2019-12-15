@@ -18,9 +18,9 @@ type RoomProvider interface {
 }
 
 // Run starts the WebSocket api.
-func Run(roomProvider RoomProvider) {
+func Run(roomProvider RoomProvider, listenAddr string) {
 	http.HandleFunc("/", server(roomProvider))
-	err := http.ListenAndServe(":40293", nil)
+	err := http.ListenAndServe(listenAddr, nil)
 	if err != nil {
 		panic("ListenAndServe: " + err.Error())
 	}
