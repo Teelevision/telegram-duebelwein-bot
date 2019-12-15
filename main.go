@@ -7,7 +7,8 @@ import (
 )
 
 type config struct {
-	TelegramBotToken string `env:"TELEGRAM_BOT_TOKEN"`
+	TelegramBotToken  string `env:"TELEGRAM_BOT_TOKEN"`
+	PlayerURLTemplate string `env:"PLAYER_URL_TEMPLATE"`
 }
 
 func main() {
@@ -17,7 +18,7 @@ func main() {
 	}
 
 	// start bot
-	bot, err := telegram.NewBot(cfg.TelegramBotToken)
+	bot, err := telegram.NewBot(cfg.TelegramBotToken, cfg.PlayerURLTemplate)
 	if err != nil {
 		panic(err)
 	}

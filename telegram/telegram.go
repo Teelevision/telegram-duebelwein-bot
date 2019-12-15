@@ -18,7 +18,8 @@ import (
 type Bot struct {
 	telegram *tb.Bot
 	sync.RWMutex
-	chats map[int64]*chat
+	chats             map[int64]*chat
+	playerURLTemplate string
 }
 
 type chat struct {
@@ -36,7 +37,7 @@ type mediumContext struct {
 }
 
 // NewBot returns a new bot. It is not started, yet.
-func NewBot(token string) (*Bot, error) {
+func NewBot(token, playerURLTemplate string) (*Bot, error) {
 	tbBot, err := tb.NewBot(tb.Settings{
 		Token:  token,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},
@@ -45,8 +46,9 @@ func NewBot(token string) (*Bot, error) {
 		return nil, err
 	}
 	return &Bot{
-		telegram: tbBot,
-		chats:    make(map[int64]*chat),
+		telegram:          tbBot,
+		chats:             make(map[int64]*chat),
+		playerURLTemplate: playerURLTemplate,
 	}, nil
 }
 
@@ -57,7 +59,9 @@ func (b *Bot) Start() {
 			return
 		}
 		b.seeChat(msg.Chat.ID)
-		b.telegram.Send(msg.Chat, "🔥 Dübelweinbot is in da house! ☠️")
+		intro := "🔥 Dübelweinbot is in da house! ☠️\n" +
+			fmt.Sprintf(b.playerURLTemplate, fmt.Sprint(msg.Chat.ID))
+		b.telegram.Send(msg.Chat, intro)
 	})
 
 	b.telegram.Handle(tb.OnUserJoined, func(msg *tb.Message) {
