@@ -25,12 +25,12 @@ type Bot struct {
 type chat struct {
 	*room.Room
 	sync.RWMutex
-	users map[int]*user
+	users map[int64]*user
 	media map[medium.Medium]*mediumContext
 }
 
 type user struct {
-	ID int
+	ID int64
 }
 
 type mediumContext struct {
@@ -211,13 +211,13 @@ func (b *Bot) seeChat(chatID int64) *chat {
 	}
 	b.chats[chatID] = &chat{
 		Room:  room.New(),
-		users: make(map[int]*user),
+		users: make(map[int64]*user),
 		media: make(map[medium.Medium]*mediumContext),
 	}
 	return b.chats[chatID]
 }
 
-func (b *Bot) seeUser(chatID int64, userID int) (*chat, *user) {
+func (b *Bot) seeUser(chatID int64, userID int64) (*chat, *user) {
 	chat := b.seeChat(chatID)
 	chat.Lock()
 	defer chat.Unlock()
