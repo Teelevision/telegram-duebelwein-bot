@@ -14,7 +14,7 @@ type testRoom struct {
 }
 
 func (r testRoom) UserQueuesMedium(user interface{}, m medium.Medium) {
-	if err := r.Room.UserQueuesMedium(user, m); err != nil {
+	if _, err := r.Room.UserQueuesMedium(user, m); err != nil {
 		log.Fatalf("did not expect error when adding %q, got %q", m.ID(), err)
 	}
 }
@@ -96,10 +96,10 @@ func TestRoom_UserQueuesMedium(t *testing.T) {
 		room := New()
 		room.UserJoins(1)
 		room.UserJoins(2)
-		if err := room.UserQueuesMedium(1, &someMedium{"dog video"}); err != nil {
+		if _, err := room.UserQueuesMedium(1, &someMedium{"dog video"}); err != nil {
 			t.Fatalf("did not expect error when adding dog video the first time, got %q", err)
 		}
-		if err := room.UserQueuesMedium(2, &someMedium{"dog video"}); err != ErrMediumAlreadyExists {
+		if _, err := room.UserQueuesMedium(2, &someMedium{"dog video"}); err != ErrMediumAlreadyExists {
 			t.Fatalf("did expect error %q when adding dog video a second time, got %q", ErrMediumAlreadyExists, err)
 		}
 	})
